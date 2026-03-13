@@ -6,7 +6,6 @@ Address offs_CEconItemDefinition_pKeyValues,
 		offs_CEconItemDefinition_u8MinLevel,
 		offs_CEconItemDefinition_u8MaxLevel,
 		offs_CEconItemDefinition_u8ItemQuality,
-		offs_CEconItemDefinition_si8ItemRarity,
 		offs_CEconItemDefinition_AttributeList,
 		offs_CEconItemDefinition_pszLocalizedItemName,
 		offs_CEconItemDefinition_pszItemClassname,
@@ -193,26 +192,6 @@ int Native_GetItemQuality(Handle hPlugin, int nParams) {
 	// sign extension on byte -- valve's econ support lib uses "any" as a quality of -1
 	// this is handled through CEconItemSchema::BGetItemQualityFromName()
 	return (quality >> 7)? 0xFFFFFF00 | quality : quality;
-}
-
-/**
- * native int(int itemdef);
- * 
- * Returns the item's given item rarity.  Throws if the item is not valid.
- */
-int Native_GetItemRarity(Handle hPlugin, int nParams) {
-	int defindex = GetNativeCell(1);
-	Address pItemDef = GetEconItemDefinition(defindex);
-	
-	if (!pItemDef) {
-		ThrowNativeError(1, "Item definition index %d is not valid", defindex);
-	}
-	
-	int rarity = LoadFromAddress(pItemDef + offs_CEconItemDefinition_si8ItemRarity,
-			NumberType_Int8);
-	
-	// sign extension on byte -- items that don't have rarities assigned are -1
-	return (rarity >> 7)? 0xFFFFFF00 | rarity : rarity;
 }
 
 /**
