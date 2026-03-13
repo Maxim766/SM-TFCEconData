@@ -6,10 +6,10 @@
 
 public Plugin myinfo =
 {
-	name		= "[TF2] Econ Data Test",
-	author		= "Malifox",
-	description = "Automated tests for [TF2] Econ Data",
-	version		= "1.0.0",
+	name		= "[TF2C] Econ Data Test",
+	author		= "Malifox, adapted for TF2C by Maximus",
+	description = "Automated tests for [TF2C] Econ Data",
+	version		= "1.0.0C",
 	url			= ""
 }
 
@@ -24,13 +24,13 @@ public Plugin myinfo =
 
 #define TF2_LOADOUT_SLOT_COUNT 19
 
-#define DEF_INDEX_THE_THERMAL_THRUSTER 1179	// The Thermal Thruster
+#define DEF_INDEX_WEAPON 2018	// Rejuvenator
 #define DEF_INDEX_THE_HEAD_PRIZE 30838		// The Head Prize
-#define DEF_INDEX_THE_CAUTERIZERS_CAUDAL_APPENDAGE 30225 // The Cauterizer's Caudal Appendage
+#define DEF_INDEX_MEDI_GUN 29 // Medi Gun
 #define DEF_INDEX_TF_WEAPON_SHOTGUN_PYRO 12	// TF_WEAPON_SHOTGUN_PYRO
 
 #define ATTR_MAJOR_MOVE_SPEED_BONUS 442 // "major move speed bonus"
-#define ATTR_DISABLE_WEAPON_SWITCH 698 // "disable weapon switch"
+#define ATTR_DISABLE_WEAPON_SWITCH 5239 // "mod melee swing custom damage"
 
 enum LogType
 {
@@ -61,19 +61,6 @@ enum TF2ItemQuality {
 	TF2ItemQuality_Haunted = 13,
 	TF2ItemQuality_Collectors = 14,
 	TF2ItemQuality_PaintkitWeapon = 15
-}
-
-enum TF2ItemRarity
-{
-	TF2ItemRarity_Undefined = -1,
-	TF2ItemRarity_Common = 1,
-	TF2ItemRarity_Uncommon = 2,
-	TF2ItemRarity_Rare = 3,
-	TF2ItemRarity_Mythical = 4,
-	TF2ItemRarity_Legendary = 5,
-	TF2ItemRarity_Ancient = 6,
-	TF2ItemRarity_Immortal = 7,
-	TF2ItemRarity_Unusual = 99
 }
 
 /* "equip_conflicts"
@@ -181,11 +168,11 @@ int g_iTestWarnings;
 
 const int g_iTestBaseItem = DEF_INDEX_TF_WEAPON_SHOTGUN_PYRO; // items_game.txt: "baseitem" "1"
 const int g_iTestRarityLegendary = DEF_INDEX_THE_HEAD_PRIZE; // items_game.txt: Winter2016_Cosmetics_collection
-const int g_iTestRegionGroup4 = DEF_INDEX_THE_CAUTERIZERS_CAUDAL_APPENDAGE; // "pyro_tail" items_game.txt: "shared" subkey in "equip_regions_list"
+const int g_iTestRegionGroup4 = DEF_INDEX_MEDI_GUN; // "medigun_backpack" items_game.txt: "shared" subkey in "equip_regions_list"
 
 // items_game.txt: "stored_as_integer"	"1" "hidden"	"1"
-static const char g_sTestAttribNameInt[] = "disable weapon switch";
-static const char g_sTestAttribClassInt[] = "disable_weapon_switch";
+static const char g_sTestAttribNameInt[] = "mod melee swing custom damage";
+static const char g_sTestAttribClassInt[] = "mod_melee_swing_custom_damage";
 const int g_iTestAttribDefIndexInt = ATTR_DISABLE_WEAPON_SWITCH;
 
 // items_game.txt: "stored_as_integer"	"0"
@@ -205,22 +192,20 @@ enum struct TestItem
 	int iMinLevel;					// "min_ilevel"
 	int iMaxLevel;					// "max_ilevel"
 	TF2ItemQuality tf2ItemQuality;	// "item_quality"
-	TF2ItemRarity tf2ItemRarity;
 
 	void Init()
 	{
-		this.iDefIndex = DEF_INDEX_THE_THERMAL_THRUSTER;
-		this.tfClassType = TFClass_Pyro;
-		this.sName = "The Thermal Thruster";
-		this.sItemClass = "tf_weapon_rocketpack";
-		this.sItemName = "#TF_ThermalThruster";
+		this.iDefIndex = DEF_INDEX_WEAPON;
+		this.tfClassType = TFClass_Medic;
+		this.sName = "Rejuvenator";
+		this.sItemClass = "tf2c_weapon_heallauncher";
+		this.sItemName = "#TF_Weapon_Rejuvenator";
 		this.iItemLoadoutSlot = 1; // Secondary
 		this.iItemDefaultLoadoutSlot = 1; // Secondary
-		this.tf2EquipRegion = TF2EquipRegion_Back;
-		this.iMinLevel = 1;
-		this.iMaxLevel = 100;
-		this.tf2ItemQuality = TF2ItemQuality_Unique;
-		this.tf2ItemRarity = TF2ItemRarity_Undefined;
+		this.tf2EquipRegion = view_as<TF2EquipRegion>(0);
+		this.iMinLevel = 0;
+		this.iMaxLevel = 0;
+		this.tf2ItemQuality = TF2ItemQuality_Normal;
 	}
 
 	void Test_TF2Econ_IsValidItemDefinition(int client)
@@ -229,7 +214,7 @@ enum struct TestItem
 		LogTest(client, LogType_Start, sTest);
 
 		if (TF2Econ_IsValidItemDefinition(this.iDefIndex))
-			LogTest(client, LogType_Passed, sTest);
+			LogTest(client, LogType_Passed, "TF2Econ_IsValidItemDefinition(%d) returned true, expected true.", this.iDefIndex);
 		else
 			LogTest(client, LogType_Failed, "TF2Econ_IsValidItemDefinition(%d) returned false, expected true.", this.iDefIndex);
 	}
@@ -248,7 +233,8 @@ enum struct TestItem
 		}
 
 		if (StrEqual(sName, this.sName))
-			LogTest(client, LogType_Passed, sTest);
+			LogTest(client, LogType_Passed, "TF2Econ_GetItemName(%d) returned '%s', expected '%s'.",
+				this.iDefIndex, sName, this.sName);
 		else
 			LogTest(client, LogType_Failed, "TF2Econ_GetItemName(%d) returned '%s', expected '%s'.",
 				this.iDefIndex, sName, this.sName);
@@ -268,7 +254,8 @@ enum struct TestItem
 		}
 
 		if (StrEqual(sItemName, this.sItemName))
-			LogTest(client, LogType_Passed, sTest);
+			LogTest(client, LogType_Passed, "TF2Econ_GetLocalizedItemName(%d) returned '%s', expected '%s'.",
+				this.iDefIndex, sItemName, this.sItemName);
 		else
 			LogTest(client, LogType_Failed, "TF2Econ_GetLocalizedItemName(%d) returned '%s', expected '%s'.",
 				this.iDefIndex, sItemName, this.sItemName);
@@ -288,7 +275,8 @@ enum struct TestItem
 		}
 
 		if (StrEqual(sItemClass, this.sItemClass))
-			LogTest(client, LogType_Passed, sTest);
+			LogTest(client, LogType_Passed, "TF2Econ_GetItemClassName(%d) returned '%s', expected '%s'.",
+				this.iDefIndex, sItemClass, this.sItemClass);
 		else
 			LogTest(client, LogType_Failed, "TF2Econ_GetItemClassName(%d) returned '%s', expected '%s'.",
 				this.iDefIndex, sItemClass, this.sItemClass);
@@ -302,7 +290,8 @@ enum struct TestItem
 		int iLoadoutSlot = TF2Econ_GetItemLoadoutSlot(this.iDefIndex, this.tfClassType);
 
 		if (iLoadoutSlot == this.iItemLoadoutSlot)
-			LogTest(client, LogType_Passed, sTest);
+			LogTest(client, LogType_Passed, "TF2Econ_GetItemLoadoutSlot(%d) returned %d, expected %d.",
+				this.iDefIndex, iLoadoutSlot, this.iItemLoadoutSlot);
 		else
 			LogTest(client, LogType_Failed, "TF2Econ_GetItemLoadoutSlot(%d) returned %d, expected %d.",
 				this.iDefIndex, iLoadoutSlot, this.iItemLoadoutSlot);
@@ -316,7 +305,8 @@ enum struct TestItem
 		int iDefaultLoadoutSlot = TF2Econ_GetItemDefaultLoadoutSlot(this.iDefIndex);
 
 		if (iDefaultLoadoutSlot == this.iItemDefaultLoadoutSlot)
-			LogTest(client, LogType_Passed, sTest);
+			LogTest(client, LogType_Passed, "TF2Econ_GetItemDefaultLoadoutSlot(%d) returned %d, expected %d.",
+				this.iDefIndex, iDefaultLoadoutSlot, this.iItemDefaultLoadoutSlot);
 		else
 			LogTest(client, LogType_Failed, "TF2Econ_GetItemDefaultLoadoutSlot(%d) returned %d, expected %d.",
 				this.iDefIndex, iDefaultLoadoutSlot, this.iItemDefaultLoadoutSlot);
@@ -330,7 +320,8 @@ enum struct TestItem
 		TF2EquipRegion tf2EquipRegion = view_as<TF2EquipRegion>(TF2Econ_GetItemEquipRegionMask(this.iDefIndex));
 
 		if (tf2EquipRegion == this.tf2EquipRegion)
-			LogTest(client, LogType_Passed, sTest);
+			LogTest(client, LogType_Passed, "TF2Econ_GetItemEquipRegionMask(%d) returned %d, expected %d.",
+				this.iDefIndex, tf2EquipRegion, this.tf2EquipRegion);
 		else
 			LogTest(client, LogType_Failed, "TF2Econ_GetItemEquipRegionMask(%d) returned %d, expected %d.",
 				this.iDefIndex, tf2EquipRegion, this.tf2EquipRegion);
@@ -350,9 +341,9 @@ enum struct TestItem
 				LogTest(client, LogType_Failed, "TF2Econ_GetItemEquipRegionGroupBits(%d) returned %d, expected %d.",
 					this.iDefIndex, tf2EquipRegionGroupBits, this.tf2EquipRegion);
 
-			if (tf2EquipRegionGroup4Bits != TF2EquipRegion_PyroTail)
+			if (tf2EquipRegionGroup4Bits != TF2EquipRegion_MedigunBackpack)
 				LogTest(client, LogType_Failed, "TF2Econ_GetItemEquipRegionGroupBits(%d) returned %d, expected %d.",
-					g_iTestRegionGroup4, tf2EquipRegionGroup4Bits, TF2EquipRegion_PyroTail);
+					g_iTestRegionGroup4, tf2EquipRegionGroup4Bits, TF2EquipRegion_MedigunBackpack);
 
 			return;
 		}
@@ -398,35 +389,13 @@ enum struct TestItem
 		TF2ItemQuality iQuality = view_as<TF2ItemQuality>(TF2Econ_GetItemQuality(this.iDefIndex));
 
 		if (iQuality == this.tf2ItemQuality)
-			LogTest(client, LogType_Passed, sTest);
+			LogTest(client, LogType_Passed, "TF2Econ_GetItemQuality(%d) returned %d, expected %d.",
+				this.iDefIndex, iQuality, this.tf2ItemQuality);
 		else
 			LogTest(client, LogType_Failed, "TF2Econ_GetItemQuality(%d) returned %d, expected %d.",
 				this.iDefIndex, iQuality, this.tf2ItemQuality);
 	}
 
-	void Test_TF2Econ_GetItemRarity(int client)
-	{
-		char sTest[] = "TF2Econ_GetItemRarity";
-		LogTest(client, LogType_Start, sTest);
-
-		TF2ItemRarity iRarity = view_as<TF2ItemRarity>(TF2Econ_GetItemRarity(this.iDefIndex));
-		TF2ItemRarity iRarityLegendary = view_as<TF2ItemRarity>(TF2Econ_GetItemRarity(g_iTestRarityLegendary));
-
-		if (iRarity != this.tf2ItemRarity || iRarityLegendary != TF2ItemRarity_Legendary)
-		{
-			if (iRarity != this.tf2ItemRarity)
-				LogTest(client, LogType_Failed, "TF2Econ_GetItemRarity(%d) returned %d, expected %d.",
-					this.iDefIndex, iRarity, this.tf2ItemRarity);
-
-			if (iRarityLegendary != TF2ItemRarity_Legendary)
-				LogTest(client, LogType_Failed, "TF2Econ_GetItemRarity(%d) returned %d, expected %d.",
-					g_iTestRarityLegendary, iRarityLegendary, TF2ItemRarity_Legendary);
-
-			return;
-		}
-
-		LogTest(client, LogType_Passed, sTest);
-	}
 
 	void Test_TF2Econ_GetItemStaticAttributes(int client)
 	{
@@ -450,7 +419,16 @@ enum struct TestItem
 			delete attrs;
 			return;
 		}
+		
+		char buffer[5120];
+		int pos = 0;
 
+		for (int i = 0; i < attrs.Length; i++) {
+			pos += Format(buffer[pos], sizeof(buffer) - pos, "%d%s", 
+				attrs.Get(i), (i == attrs.Length - 1) ? "" : ", ");
+		}
+		PrintToConsole(client, "StaticAttributes: [%s]", buffer);
+		
 		for (int i = 0; i < iNumAttr; i++)
 		{
 			LogTest(client, LogType_Info, "TF2Econ_GetItemStaticAttributes(%d) Attrib %d: %d = %f",
@@ -485,7 +463,7 @@ Action Command_TestTF2EconData(int client, int argc)
 	g_TestItem.Test_TF2Econ_GetItemEquipRegionGroupBits(client);
 	g_TestItem.Test_TF2Econ_GetItemLevelRange(client);
 	g_TestItem.Test_TF2Econ_GetItemQuality(client);
-	g_TestItem.Test_TF2Econ_GetItemRarity(client);
+	//g_TestItem.Test_TF2Econ_GetItemRarity(client);
 	g_TestItem.Test_TF2Econ_GetItemStaticAttributes(client);
 	Test_TF2Econ_TranslateWeaponEntForClass(client);
 	Test_TF2Econ_TranslateLoadoutSlotIndexToName(client);
@@ -502,22 +480,22 @@ Action Command_TestTF2EconData(int client, int argc)
 	Test_TF2Econ_GetQualityName(client);
 	Test_TF2Econ_TranslateQualityNameToValue(client);
 	Test_TF2Econ_GetQualityList(client);
-	Test_TF2Econ_GetRarityName(client);
-	Test_TF2Econ_TranslateRarityNameToValue(client);
-	Test_TF2Econ_GetRarityList(client);
+	//Test_TF2Econ_GetRarityName(client);
+	//Test_TF2Econ_TranslateRarityNameToValue(client);
+	//Test_TF2Econ_GetRarityList(client);
 	Test_TF2Econ_GetEquipRegionGroups(client);
 	Test_TF2Econ_GetEquipRegionMask(client);
-	Test_TF2Econ_GetParticleAttributeList(client); // TF2Econ_GetParticleAttributeList, TF2Econ_GetParticleAttributeSystemName
-	Test_TF2Econ_GetPaintKitDefinitionList(client);
-	Test_TF2Econ_GetMapDefinitionIndexByName(client);
+	//Test_TF2Econ_GetParticleAttributeList(client); // TF2Econ_GetParticleAttributeList, TF2Econ_GetParticleAttributeSystemName
+	//Test_TF2Econ_GetPaintKitDefinitionList(client);
+	//Test_TF2Econ_GetMapDefinitionIndexByName(client);
 	// Address natives, only testing they don't crash and null checks
 	Test_TF2Econ_GetItemSchemaAddress(client);
-	Test_TF2Econ_GetProtoDefManagerAddress(client);
+	//Test_TF2Econ_GetProtoDefManagerAddress(client);
 	Test_TF2Econ_GetItemDefinitionAddress(client);
 	Test_TF2Econ_GetAttributeDefinitionAddress(client);
-	Test_TF2Econ_GetRarityDefinitionAddress(client);
-	Test_TF2Econ_GetParticleAttributeAddress(client);
-	Test_TF2Econ_GetPaintKitDefinitionAddress(client);
+	//Test_TF2Econ_GetRarityDefinitionAddress(client);
+	//Test_TF2Econ_GetParticleAttributeAddress(client);
+	//Test_TF2Econ_GetPaintKitDefinitionAddress(client);
 
 	char sSummaryFormat[] = LOG_PREFIX ... "Summary: Passed: %d/%d, Warnings: %d";
 	char sSummary[sizeof(sSummaryFormat) + 32];
@@ -556,7 +534,8 @@ void Test_TF2Econ_TranslateWeaponEntForClass(int client)
 	}
 
 	if (StrEqual(sClassName, sExpectedClassName))
-		LogTest(client, LogType_Passed, sTest);
+		LogTest(client, LogType_Passed, "TF2Econ_TranslateWeaponEntForClass returned '%s', expected '%s'.",
+			sClassName, sExpectedClassName);
 	else
 		LogTest(client, LogType_Failed, "TF2Econ_TranslateWeaponEntForClass returned '%s', expected '%s'.",
 			sClassName, sExpectedClassName);
@@ -592,7 +571,8 @@ void Test_TF2Econ_TranslateLoadoutSlotNameToIndex(int client)
 	int iIndex = TF2Econ_TranslateLoadoutSlotNameToIndex("secondary");
 
 	if (iIndex == iExpectedIndex)
-		LogTest(client, LogType_Passed, sTest);
+		LogTest(client, LogType_Passed, "TF2Econ_TranslateLoadoutSlotNameToIndex returned %d, expected %d.",
+			iIndex, iExpectedIndex);
 	else
 		LogTest(client, LogType_Failed, "TF2Econ_TranslateLoadoutSlotNameToIndex returned %d, expected %d.",
 			iIndex, iExpectedIndex);
@@ -606,7 +586,8 @@ void Test_TF2Econ_GetLoadoutSlotCount(int client)
 	int iCount = TF2Econ_GetLoadoutSlotCount();
 
 	if (iCount == TF2_LOADOUT_SLOT_COUNT)
-		LogTest(client, LogType_Passed, sTest);
+		LogTest(client, LogType_Passed, "TF2Econ_GetLoadoutSlotCount returned %d, expected %d.",
+			iCount, TF2_LOADOUT_SLOT_COUNT);
 	else
 		LogTest(client, LogType_Failed, "TF2Econ_GetLoadoutSlotCount returned %d, expected %d.",
 			iCount, TF2_LOADOUT_SLOT_COUNT);
@@ -674,7 +655,8 @@ void Test_TF2Econ_GetAttributeName(int client)
 	}
 
 	if (StrEqual(sName, g_sTestAttribNameInt))
-		LogTest(client, LogType_Passed, sTest);
+		LogTest(client, LogType_Passed, "TF2Econ_GetAttributeName(%d) returned '%s', expected '%s'.",
+			g_iTestAttribDefIndexInt, sName, g_sTestAttribNameInt);
 	else
 		LogTest(client, LogType_Failed, "TF2Econ_GetAttributeName(%d) returned '%s', expected '%s'.",
 			g_iTestAttribDefIndexInt, sName, g_sTestAttribNameInt);
@@ -694,7 +676,8 @@ void Test_TF2Econ_GetAttributeClassName(int client)
 	}
 
 	if (StrEqual(sClassName, g_sTestAttribClassInt))
-		LogTest(client, LogType_Passed, sTest);
+		LogTest(client, LogType_Passed, "TF2Econ_GetAttributeClassName(%d) returned '%s', expected '%s'.",
+			g_iTestAttribDefIndexInt, sClassName, g_sTestAttribClassInt);
 	else
 		LogTest(client, LogType_Failed, "TF2Econ_GetAttributeClassName(%d) returned '%s', expected '%s'.",
 			g_iTestAttribDefIndexInt, sClassName, g_sTestAttribClassInt);
@@ -725,7 +708,8 @@ void Test_TF2Econ_GetAttributeDefinitionString(int client)
 	TF2Econ_GetAttributeDefinitionString(g_iTestAttribDefIndexInt, "stored_as_integer", sValue, sizeof(sValue), sDefault);
 
 	if (StrEqual(sValue, sExpectedValue))
-		LogTest(client, LogType_Passed, sTest);
+		LogTest(client, LogType_Passed, "TF2Econ_GetAttributeDefinitionString(%d) returned '%s', expected '%s'.",
+			g_iTestAttribDefIndexInt, sValue, sExpectedValue);
 	else
 		LogTest(client, LogType_Failed, "TF2Econ_GetAttributeDefinitionString(%d) returned '%s', expected '%s'.",
 			g_iTestAttribDefIndexInt, sValue, sExpectedValue);
@@ -739,7 +723,8 @@ void Test_TF2Econ_TranslateAttributeNameToDefinitionIndex(int client)
 	int iDefIndex = TF2Econ_TranslateAttributeNameToDefinitionIndex(g_sTestAttribNameInt);
 
 	if (iDefIndex == g_iTestAttribDefIndexInt)
-		LogTest(client, LogType_Passed, sTest);
+		LogTest(client, LogType_Passed, "TF2Econ_TranslateAttributeNameToDefinitionIndex('%s') returned %d, expected %d.",
+			g_sTestAttribNameInt, iDefIndex, g_iTestAttribDefIndexInt);
 	else
 		LogTest(client, LogType_Failed, "TF2Econ_TranslateAttributeNameToDefinitionIndex('%s') returned %d, expected %d.",
 			g_sTestAttribNameInt, iDefIndex, g_iTestAttribDefIndexInt);
@@ -769,6 +754,15 @@ void Test_TF2Econ_GetAttributeList(int client)
 	}
 
 	LogTest(client, LogType_Info, "TF2Econ_GetAttributeList returned %d attributes.", iNumAttr);
+	
+	char buffer[51200];
+	int pos = 0;
+
+	for (int i = 0; i < attrs.Length; i++) {
+		pos += Format(buffer[pos], sizeof(buffer) - pos, "%d%s", 
+			attrs.Get(i), (i == attrs.Length - 1) ? "" : ", ");
+	}
+	PrintToConsole(client, "Attributes: [%s]", buffer);
 
 	if (attrs.FindValue(g_iTestAttribDefIndexInt) == -1)
 	{
@@ -798,7 +792,8 @@ void Test_TF2Econ_GetQualityName(int client)
 	}
 
 	if (StrEqual(sName, sExpectedName))
-		LogTest(client, LogType_Passed, sTest);
+		LogTest(client, LogType_Passed, "TF2Econ_GetQualityName(%d) returned '%s', expected '%s'.",
+			TF2ItemQuality_Unique, sName, sExpectedName);
 	else
 		LogTest(client, LogType_Failed, "TF2Econ_GetQualityName(%d) returned '%s', expected '%s'.",
 			TF2ItemQuality_Unique, sName, sExpectedName);
@@ -814,7 +809,8 @@ void Test_TF2Econ_TranslateQualityNameToValue(int client)
 	int iValue = TF2Econ_TranslateQualityNameToValue(sQualityName);
 
 	if (iValue == iExpectedValue)
-		LogTest(client, LogType_Passed, sTest);
+		LogTest(client, LogType_Passed, "TF2Econ_TranslateQualityNameToValue('%s') returned %d, expected %d.",
+			sQualityName, iValue, iExpectedValue);
 	else
 		LogTest(client, LogType_Failed, "TF2Econ_TranslateQualityNameToValue('%s') returned %d, expected %d.",
 			sQualityName, iValue, iExpectedValue);
@@ -843,6 +839,15 @@ void Test_TF2Econ_GetQualityList(int client)
 		return;
 	}
 
+	char buffer[5120];
+	int pos = 0;
+
+	for (int i = 0; i < qualities.Length; i++) {
+		pos += Format(buffer[pos], sizeof(buffer) - pos, "%d%s", 
+			qualities.Get(i), (i == qualities.Length - 1) ? "" : ", ");
+	}
+	PrintToConsole(client, "Qualities: [%s]", buffer);
+
 	LogTest(client, LogType_Info, "TF2Econ_GetQualityList returned %d qualities.", iNumQualities);
 
 	if (qualities.FindValue(TF2ItemQuality_Unique) == -1)
@@ -855,81 +860,6 @@ void Test_TF2Econ_GetQualityList(int client)
 	}
 
 	delete qualities;
-	LogTest(client, LogType_Passed, sTest);
-}
-
-void Test_TF2Econ_GetRarityName(int client)
-{
-	char sTest[] = "TF2Econ_GetRarityName";
-	LogTest(client, LogType_Start, sTest);
-
-	char sExpectedName[] = "uncommon";
-	char sName[64];
-
-	if (!TF2Econ_GetRarityName(TF2ItemRarity_Uncommon, sName, sizeof(sName)))
-	{
-		LogTest(client, LogType_Failed, "TF2Econ_GetRarityName(%d) returned false.", TF2ItemRarity_Uncommon);
-		return;
-	}
-
-	if (StrEqual(sName, sExpectedName))
-		LogTest(client, LogType_Passed, sTest);
-	else
-		LogTest(client, LogType_Failed, "TF2Econ_GetRarityName(%d) returned '%s', expected '%s'.",
-			TF2ItemRarity_Uncommon, sName, sExpectedName);
-}
-
-void Test_TF2Econ_TranslateRarityNameToValue(int client)
-{
-	char sTest[] = "TF2Econ_TranslateRarityNameToValue";
-	LogTest(client, LogType_Start, sTest);
-
-	char sRarityName[] = "uncommon";
-	int iExpectedValue = TF2ItemRarity_Uncommon;
-	int iValue = TF2Econ_TranslateRarityNameToValue(sRarityName);
-
-	if (iValue == iExpectedValue)
-		LogTest(client, LogType_Passed, sTest);
-	else
-		LogTest(client, LogType_Failed, "TF2Econ_TranslateRarityNameToValue('%s') returned %d, expected %d.",
-			sRarityName, iValue, iExpectedValue);
-}
-
-void Test_TF2Econ_GetRarityList(int client)
-{
-	char sTest[] = "TF2Econ_GetRarityList";
-	LogTest(client, LogType_Start, sTest);
-
-	ArrayList rarities = TF2Econ_GetRarityList();
-
-	if (!rarities)
-	{
-		LogTest(client, LogType_Failed, "TF2Econ_GetRarityList returned null.");
-		return;
-	}
-
-	int iNumRarities = rarities.Length;
-
-	if (!iNumRarities)
-	{
-		LogTest(client, LogType_Failed, "TF2Econ_GetRarityList returned empty list.");
-
-		delete rarities;
-		return;
-	}
-
-	LogTest(client, LogType_Info, "TF2Econ_GetRarityList returned %d rarities.", iNumRarities);
-
-	if (rarities.FindValue(TF2ItemRarity_Uncommon) == -1)
-	{
-		LogTest(client, LogType_Failed, "TF2Econ_GetRarityList did not contain expected rarity %d.",
-			TF2ItemRarity_Uncommon);
-
-		delete rarities;
-		return;
-	}
-
-	delete rarities;
 	LogTest(client, LogType_Passed, sTest);
 }
 
@@ -994,109 +924,7 @@ void Test_TF2Econ_GetEquipRegionMask(int client)
 			sRegion, iMask, iExpectedMask);
 }
 
-void Test_TF2Econ_GetParticleAttributeList(int client)
-{
-	char sTest[] = "TF2Econ_GetParticleAttributeList";
-	LogTest(client, LogType_Start, sTest);
 
-	char sParticleSets[TFEconParticleSet][] =
-	{
-		"ParticleSet_All",
-		"ParticleSet_CosmeticUnusualEffects",
-		"ParticleSet_WeaponUnusualEffects",
-		"ParticleSet_TauntUnusualEffects"
-	};
-
-	ArrayList particles;
-	int iNumParticles;
-	int iParticleIndex;
-	int iNumPrint;
-	char sParticleName[128];
-
-	for (TFEconParticleSet i = ParticleSet_All; i < view_as<TFEconParticleSet>(sizeof(sParticleSets)); i++)
-	{
-		particles = TF2Econ_GetParticleAttributeList(i);
-
-		if (!particles)
-		{
-			LogTest(client, LogType_Failed, "TF2Econ_GetParticleAttributeList(%s) returned null.", sParticleSets[i]);
-			return;
-		}
-
-		iNumParticles = particles.Length;
-
-		if (!iNumParticles)
-		{
-			LogTest(client, LogType_Failed, "TF2Econ_GetParticleAttributeList(%s) returned empty list.", sParticleSets[i]);
-
-			delete particles;
-			return;
-		}
-
-		iNumPrint = iNumParticles < LOG_MAX_PRINT_PARTICLE_NAMES ? iNumParticles : LOG_MAX_PRINT_PARTICLE_NAMES;
-
-		LogTest(client, LogType_Info, "TF2Econ_GetParticleAttributeList(%s) returned %d particles, printing first %d:",
-			sParticleSets[i], iNumParticles, iNumPrint);
-
-		for (int j = 0; j < iNumPrint; j++)
-		{
-			iParticleIndex = particles.Get(j);
-
-			if (!TF2Econ_GetParticleAttributeSystemName(iParticleIndex, sParticleName, sizeof(sParticleName)))
-			{
-				LogTest(client, LogType_Failed, "TF2Econ_GetParticleAttributeSystemName(%d) returned false from %s", iParticleIndex, sParticleSets[i]);
-
-				delete particles;
-				return;
-			}
-
-			LogTest(client, LogType_Info, "%s %d: %d = %s", sParticleSets[i], j, iParticleIndex, sParticleName);
-		}
-
-		delete particles;
-	}
-
-	LogTest(client, LogType_Passed, sTest);
-}
-
-void Test_TF2Econ_GetPaintKitDefinitionList(int client)
-{
-	char sTest[] = "TF2Econ_GetPaintKitDefinitionList";
-	LogTest(client, LogType_Start, sTest);
-
-	ArrayList paintKits = TF2Econ_GetPaintKitDefinitionList();
-
-	if (!paintKits)
-	{
-		LogTest(client, LogType_Failed, "TF2Econ_GetPaintKitDefinitionList returned null.");
-		return;
-	}
-
-	int iNumPaintKits = paintKits.Length;
-
-	if (!iNumPaintKits)
-	{
-		LogTest(client, LogType_Failed, "TF2Econ_GetPaintKitDefinitionList returned empty list.");
-
-		delete paintKits;
-		return;
-	}
-
-	int iNumPrint = iNumPaintKits < LOG_MAX_PRINT_PAINTKIT_INDEXES ? iNumPaintKits : LOG_MAX_PRINT_PAINTKIT_INDEXES;
-	int iPaintKitIndex;
-
-	LogTest(client, LogType_Info, "TF2Econ_GetPaintKitDefinitionList returned %d paint kits, printing first %d indexes:",
-		iNumPaintKits, iNumPrint);
-
-	for (int i = 0; i < iNumPrint; i++)
-	{
-		iPaintKitIndex = paintKits.Get(i);
-		LogTest(client, LogType_Info, "Paint Kit %d: %d", i, iPaintKitIndex);
-	}
-
-	delete paintKits;
-	LogTest(client, LogType_Passed, sTest);
-}
 
 void Test_TF2Econ_GetItemSchemaAddress(int client)
 {
@@ -1109,19 +937,6 @@ void Test_TF2Econ_GetItemSchemaAddress(int client)
 		LogTest(client, LogType_Passed, sTest);
 	else
 		LogTest(client, LogType_Failed, "TF2Econ_GetItemSchemaAddress returned null.");
-}
-
-void Test_TF2Econ_GetProtoDefManagerAddress(int client)
-{
-	char sTest[] = "TF2Econ_GetProtoDefManagerAddress";
-	LogTest(client, LogType_Start, sTest);
-
-	Address addr = TF2Econ_GetProtoDefManagerAddress();
-
-	if (addr)
-		LogTest(client, LogType_Passed, sTest);
-	else
-		LogTest(client, LogType_Failed, "TF2Econ_GetProtoDefManagerAddress returned null.");
 }
 
 void Test_TF2Econ_GetItemDefinitionAddress(int client)
@@ -1148,65 +963,6 @@ void Test_TF2Econ_GetAttributeDefinitionAddress(int client)
 		LogTest(client, LogType_Passed, sTest);
 	else
 		LogTest(client, LogType_Failed, "TF2Econ_GetAttributeDefinitionAddress(%d) returned null.", g_iTestAttribDefIndexInt);
-}
-
-void Test_TF2Econ_GetRarityDefinitionAddress(int client)
-{
-	char sTest[] = "TF2Econ_GetRarityDefinitionAddress";
-	LogTest(client, LogType_Start, sTest);
-
-	Address addr = TF2Econ_GetRarityDefinitionAddress(TF2ItemRarity_Unusual);
-
-	if (addr)
-		LogTest(client, LogType_Passed, sTest);
-	else
-		LogTest(client, LogType_Failed, "TF2Econ_GetRarityDefinitionAddress(%d) returned null.", TF2ItemRarity_Unusual);
-}
-
-void Test_TF2Econ_GetParticleAttributeAddress(int client)
-{
-	char sTest[] = "TF2Econ_GetParticleAttributeAddress";
-	LogTest(client, LogType_Start, sTest);
-
-	int iTestParticleIndex = 4; //community_sparkle
-
-	Address addr = TF2Econ_GetParticleAttributeAddress(iTestParticleIndex);
-
-	if (addr)
-		LogTest(client, LogType_Passed, sTest);
-	else
-		LogTest(client, LogType_Failed, "TF2Econ_GetParticleAttributeAddress(%d) returned null.", iTestParticleIndex);
-}
-
-void Test_TF2Econ_GetPaintKitDefinitionAddress(int client)
-{
-	char sTest[] = "TF2Econ_GetPaintKitDefinitionAddress";
-	LogTest(client, LogType_Start, sTest);
-
-	int iTestPaintKitIndex = 102; // random choice
-
-	Address addr = TF2Econ_GetPaintKitDefinitionAddress(iTestPaintKitIndex);
-
-	if (addr)
-		LogTest(client, LogType_Passed, sTest);
-	else
-		LogTest(client, LogType_Failed, "TF2Econ_GetPaintKitDefinitionAddress(%d) returned null.", iTestPaintKitIndex);
-}
-
-void Test_TF2Econ_GetMapDefinitionIndexByName(int client)
-{
-	char sTest[] = "TF2Econ_GetMapDefinitionIndexByName";
-	LogTest(client, LogType_Start, sTest);
-
-	char sMapName[] = "ctf_2fort";
-	int iExpectedDefIndex = 12; // items_game.txt: "name"		"ctf_2fort"
-	int iDefIndex = TF2Econ_GetMapDefinitionIndexByName(sMapName);
-
-	if (iDefIndex == iExpectedDefIndex)
-		LogTest(client, LogType_Passed, sTest);
-	else
-		LogTest(client, LogType_Failed, "TF2Econ_GetMapDefinitionIndexByName('%s') returned %d, expected %d.",
-			sMapName, iDefIndex, iExpectedDefIndex);
 }
 
 void LogTest(int client, LogType logType, const char[] sFormat, any ...)
