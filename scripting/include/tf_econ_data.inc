@@ -23,16 +23,6 @@ enum {
 };
 
 /**
- * Value for TF2Econ_GetParticleAttributeList to look up the items in a specific list.
- */
-enum TFEconParticleSet {
-	ParticleSet_All,
-	ParticleSet_CosmeticUnusualEffects,
-	ParticleSet_WeaponUnusualEffects,
-	ParticleSet_TauntUnusualEffects
-};
-
-/**
  * Callback for `TF2Econ_GetItemList`.  Return `true` if the specified item definition index
  * should be added to the returned `ArrayList`.
  */
@@ -112,11 +102,6 @@ native bool TF2Econ_GetItemLevelRange(int itemdef, int &iMinLevel, int &iMaxLeve
  * Returns the given item's statically defined quality.
  */
 native int TF2Econ_GetItemQuality(int itemdef);
-
-/**
- * Returns the given item's rarity, or -1 if the item does not have a statically defined rarity.
- */
-native int TF2Econ_GetItemRarity(int itemdef);
 
 /**
  * Returns an `ArrayList` containing attribute defindex / value pairs corresponding to the given
@@ -258,30 +243,6 @@ native int TF2Econ_TranslateQualityNameToValue(const char[] name, bool caseSensi
 native ArrayList TF2Econ_GetQualityList();
 
 /**
- * Stores the rarity name in the given buffer and returns true if given a valid rarity value,
- * otherwise returns false;
- * 
- * Note:  Rarity names returned by this value correspond to the localized "weapon grade" names,
- * but are completely different.  "Civilian Grade" corresponds to "common", "Freelance Grade" to
- * "uncommon", and so on.
- */
-native bool TF2Econ_GetRarityName(int rarity, char[] buffer, int maxlen);
-
-/**
- * Returns the rarity value for a given name, or -1 if the name does not correspond to an item
- * rarity.
- */
-native int TF2Econ_TranslateRarityNameToValue(const char[] name, bool caseSensitive = true);
-
-/**
- * Returns an ArrayList containing all valid rarity values.
- * 
- * This handle is owned by the calling plugin, so it should be `delete`d when not needed
- * anymore.
- */
-native ArrayList TF2Econ_GetRarityList();
-
-/**
  * Returns a StringMap containing all valid equip region names mapped to their equip region
  * group indices.
  */
@@ -294,55 +255,11 @@ native StringMap TF2Econ_GetEquipRegionGroups();
 native bool TF2Econ_GetEquipRegionMask(const char[] equipRegion, int &mask);
 
 /**
- * Stores the "system" name for the given particle attribute index in the given buffer.
- * Returns true if the index corresponds to a particle, false otherwise.
- */
-native bool TF2Econ_GetParticleAttributeSystemName(int particleIndex, char[] buffer, int maxlen);
-
-/**
- * Returns an ArrayList containing all particle attribute values, or just those in a particular
- * set (currently valid sets are for cosmetic, taunt, or weapon effects).  Particle effects in
- * the "other_particles" and "killstreak_eyeglows" categories are only available in "all" set.
- * 
- * Throws an error if the given TFEconParticleSet value is not recognized.
- * 
- * Handle is owned by the calling plugin.
- */
-native ArrayList TF2Econ_GetParticleAttributeList(
-		TFEconParticleSet particleSet = ParticleSet_All);
-
-/**
- * Returns an ArrayList containing all valid paint kit protodef indices.  `delete` when
- * unneeded.
- * 
- * This includes paint kits that are only applied to weapons, but does not include unused paint
- * kits (as defined in resource/tf_proto_obj_defs_english.txt and other languages).
- * 
- * Handle is owned by the calling plugin.
- */
-native ArrayList TF2Econ_GetPaintKitDefinitionList();
-
-/**
- * Returns the definition index of a given map name, or 0 if not valid.
- * 
- * Note that the name "Missing" also points to a valid map definition, and will also return 0;
- * the zero-on-invalid case is intended to match the behavior of the game.
- */
-native int TF2Econ_GetMapDefinitionIndexByName(const char[] name);
-
-/**
  * Returns the address of the singleton CTFItemSchema (subclass of CEconItemSchema).
  * 
  * Here be dragons.
  */
 native Address TF2Econ_GetItemSchemaAddress();
-
-/**
- * Returns the address of the singleton CProtoBufScriptObjectDefinitionManager.
- * 
- * Here be dragons.
- */
-native Address TF2Econ_GetProtoDefManagerAddress();
 
 /**
  * Returns the address of the CEconItemDefinition for the item with the given definition index,
@@ -360,26 +277,6 @@ native Address TF2Econ_GetItemDefinitionAddress(int itemdef);
  * Here be dragons.
  */
 native Address TF2Econ_GetAttributeDefinitionAddress(int attrdef);
-
-/**
- * Returns the address of the CEconItemRarityDefinition for the rarity with the given value,
- * or Address_Null if not valid.
- * 
- * You know the drill at this point.
- */
-native Address TF2Econ_GetRarityDefinitionAddress(int rarity);
-
-/**
- * Returns the address of the attachedparticlesystem_t for the system corresponding to the given
- * index, or Address_Null if not valid.
- */
-native Address TF2Econ_GetParticleAttributeAddress(int particleIndex);
-
-/**
- * Returns the address of the CPaintKitDefinition for the paintkit with the given protodef
- * index, or Address_Null if not valid.
- */
-native Address TF2Econ_GetPaintKitDefinitionAddress(int protoDefIndex);
 
 /**
  * @deprecated Renamed native to TF2Econ_IsValidItemDefinition so there is a better distinction
