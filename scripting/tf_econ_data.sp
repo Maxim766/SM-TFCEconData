@@ -1,5 +1,5 @@
 /**
- * [TF2] Econ Data
+ * [TF2C] Econ Data
  * 
  * Functions to read item information from game memory.
  */
@@ -14,21 +14,18 @@
 #include <stocksoup/handles>
 #include <stocksoup/memory>
 
-#define PLUGIN_VERSION "0.19.1"
+#define PLUGIN_VERSION "0.19.1C"
 public Plugin myinfo = {
-	name = "[TF2] Econ Data",
-	author = "nosoop",
+	name = "[TF2C] Econ Data",
+	author = "nosoop, adapted for TF2C by Maximus",
 	description = "A library to read item data straight from the game's memory.",
 	version = PLUGIN_VERSION,
-	url = "https://github.com/nosoop/SM-TFEconData"
+	url = ""
 }
 
 Address offs_CUtlMap_pMemory, // 4/8 (0x04/0x08)
-		offs_CUtlMap_Data_elem_u16, // 12/16 (0x0C/0x10), IndexType_t == unsigned short
 		offs_CUtlMap_Data_elem_i32, // 20/24 (0x14/0x18), IndexType_t == int
-		offs_CUtlMap_nAllocationCount, // 8/16 (0x08/0x10)
-		offs_CUtlMap_Root, // 16/24 (0x10/0x18)
-		offs_CUtlMap_NumElements_u16; // 18/26 (0x12/0x1A), IndexType_t == unsigned short
+		offs_CUtlMap_nAllocationCount; // 8/16 (0x08/0x10)
 
 Address offs_CUtlVector_m_size;
 
@@ -40,15 +37,11 @@ Address offs_CEconItemSchema_ItemQualities,
 		offs_CEconItemSchema_iNextNode, // 8/16 (0x08/0x10) CUtlHashMapLarge<int, CEconItemDefinition*> CUtlMemory<Node_t> m_memNodes.m_iNextNode
 		sizeof_ItemDefinitionMap_t_Node_t; // 12/24 (0x0C/0x18) {int m_key, CEconItemDefinition* m_elem, int m_iNextNode}
 
-#include "tf_econ_data/attached_particle_systems.sp"
 #include "tf_econ_data/loadout_slot.sp"
 #include "tf_econ_data/item_definition.sp"
 #include "tf_econ_data/equip_regions.sp"
 #include "tf_econ_data/attribute_definition.sp"
-#include "tf_econ_data/paintkit_definition.sp"
 #include "tf_econ_data/quality_definition.sp"
-#include "tf_econ_data/rarity_definition.sp"
-#include "tf_econ_data/map_definition.sp"
 #include "tf_econ_data/keyvalues.sp"
 
 #define TF_ITEMDEF_DEFAULT -1
@@ -59,9 +52,6 @@ Handle g_SDKCallSchemaGetAttributeDefinition;
 Handle g_SDKCallSchemaGetAttributeDefinitionByName;
 Handle g_SDKCallAttributeTypeCanBeNetworked;
 Handle g_SDKCallTranslateWeaponEntForClass;
-Handle g_SDKCallGetProtoDefManager;
-Handle g_SDKCallGetProtoDefIndex;
-Handle g_SDKCallGetMasterMapDefByName;
 
 public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int maxlen) {
 	RegPluginLibrary("tf_econ_data");
@@ -78,7 +68,6 @@ public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int maxlen) {
 	CreateNative("TF2Econ_GetItemEquipRegionGroupBits", Native_GetItemEquipRegionGroupBits);
 	CreateNative("TF2Econ_GetItemLevelRange", Native_GetItemLevelRange);
 	CreateNative("TF2Econ_GetItemQuality", Native_GetItemQuality);
-	CreateNative("TF2Econ_GetItemRarity", Native_GetItemRarity);
 	CreateNative("TF2Econ_GetItemStaticAttributes", Native_GetItemStaticAttributes);
 	CreateNative("TF2Econ_GetItemDefinitionString", Native_GetItemDefinitionString);
 	
@@ -113,34 +102,14 @@ public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int maxlen) {
 	CreateNative("TF2Econ_TranslateQualityNameToValue", Native_TranslateQualityNameToValue);
 	CreateNative("TF2Econ_GetQualityList", Native_GetQualityList);
 	
-	// rarity information
-	CreateNative("TF2Econ_GetRarityName", Native_GetRarityName);
-	CreateNative("TF2Econ_TranslateRarityNameToValue", Native_TranslateRarityNameToValue);
-	CreateNative("TF2Econ_GetRarityList", Native_GetRarityList);
-	
 	// equip region information
 	CreateNative("TF2Econ_GetEquipRegionGroups", Native_GetEquipRegionGroups);
 	CreateNative("TF2Econ_GetEquipRegionMask", Native_GetEquipRegionMask);
 	
-	// particle attribute information
-	CreateNative("TF2Econ_GetParticleAttributeSystemName",
-			Native_GetParticleAttributeSystemName);
-	CreateNative("TF2Econ_GetParticleAttributeList", Native_GetParticleAttributeList);
-	
-	// paintkit / weapon skin information
-	CreateNative("TF2Econ_GetPaintKitDefinitionList", Native_GetPaintKitList);
-
-	// map information
-	CreateNative("TF2Econ_GetMapDefinitionIndexByName", Native_GetMapDefinitionIndex);
-	
 	// low-level stuff
 	CreateNative("TF2Econ_GetItemSchemaAddress", Native_GetItemSchemaAddress);
-	CreateNative("TF2Econ_GetProtoDefManagerAddress", Native_GetProtoDefManagerAddress);
 	CreateNative("TF2Econ_GetItemDefinitionAddress", Native_GetItemDefinitionAddress);
 	CreateNative("TF2Econ_GetAttributeDefinitionAddress", Native_GetAttributeDefinitionAddress);
-	CreateNative("TF2Econ_GetRarityDefinitionAddress", Native_GetRarityDefinitionAddress);
-	CreateNative("TF2Econ_GetParticleAttributeAddress", Native_GetParticleAttributeAddress);
-	CreateNative("TF2Econ_GetPaintKitDefinitionAddress", Native_GetPaintKitDefinitionAddress);
 	
 	// backwards-compatibile
 	CreateNative("TF2Econ_IsValidDefinitionIndex", Native_IsValidItemDefinition);
@@ -159,6 +128,9 @@ public void OnPluginStart() {
 	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature, "GEconItemSchema()");
 	PrepSDKCall_SetReturnInfo(SDKType_VirtualAddress, SDKPass_Plain);	//Returns address of CEconItemSchema
 	g_SDKCallGetEconItemSchema = EndPrepSDKCall();
+	if (!g_SDKCallGetEconItemSchema) {
+		SetFailState("Could not initialize call to GEconItemSchema()");
+	}
 	
 	StartPrepSDKCall(SDKCall_VirtualAddress);
 	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature,
@@ -166,6 +138,9 @@ public void OnPluginStart() {
 	PrepSDKCall_SetReturnInfo(SDKType_VirtualAddress, SDKPass_Plain);	//Returns address of a CEconItemDefinition
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);		//int iItemIndex
 	g_SDKCallSchemaGetItemDefinition = EndPrepSDKCall();
+	if (!g_SDKCallSchemaGetItemDefinition) {
+		SetFailState("Could not initialize call to CEconItemSchema::GetItemDefinition()");
+	}
 	
 	StartPrepSDKCall(SDKCall_VirtualAddress);
 	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature,
@@ -173,6 +148,10 @@ public void OnPluginStart() {
 	PrepSDKCall_SetReturnInfo(SDKType_VirtualAddress, SDKPass_Plain);	//Returns address of a CEconItemAttributeDefinition
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);		//int iAttribIndex
 	g_SDKCallSchemaGetAttributeDefinition = EndPrepSDKCall();
+	if (!g_SDKCallSchemaGetAttributeDefinition) {
+		SetFailState("Could not initialize call to CEconItemSchema::GetAttributeDefinition()");
+	}
+	
 	
 	StartPrepSDKCall(SDKCall_VirtualAddress);
 	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature,
@@ -180,19 +159,19 @@ public void OnPluginStart() {
 	PrepSDKCall_SetReturnInfo(SDKType_VirtualAddress, SDKPass_Plain);	//Returns address of a CEconItemAttributeDefinition
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);			//const char *pszDefName
 	g_SDKCallSchemaGetAttributeDefinitionByName = EndPrepSDKCall();
+	if (!g_SDKCallSchemaGetAttributeDefinitionByName) {
+		SetFailState("Could not initialize call to CEconItemSchema::GetAttributeDefinitionByName()");
+	}
 
 	StartPrepSDKCall(SDKCall_VirtualAddress); // attr_type
 	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Virtual,
 			"ISchemaAttributeTypeBase::BSupportsGame..."); // 64 chars ought to be enough for anyone -- dvander, probably
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
 	g_SDKCallAttributeTypeCanBeNetworked = EndPrepSDKCall();
-	
-	StartPrepSDKCall(SDKCall_VirtualAddress);
-	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature,
-			"CTFItemSchema::GetMasterMapDefByName()");
-	PrepSDKCall_SetReturnInfo(SDKType_VirtualAddress, SDKPass_Plain);	//Returns address of a MapDef_t
-	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);			//const char *pszSearchName
-	g_SDKCallGetMasterMapDefByName = EndPrepSDKCall();
+	if (!g_SDKCallAttributeTypeCanBeNetworked) {
+		SetFailState("Could not initialize call to ISchemaAttributeTypeBase::BSupportsGame...");
+	}
+
 
 	StartPrepSDKCall(SDKCall_Static);
 	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature, "TranslateWeaponEntForClass()");
@@ -201,12 +180,20 @@ public void OnPluginStart() {
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);		//int iClass
 	g_SDKCallTranslateWeaponEntForClass = EndPrepSDKCall();
 	
+	if (!g_SDKCallTranslateWeaponEntForClass) {
+		SetFailState("Could not initialize call to TranslateWeaponEntForClass()");
+	}
+	
 	StartPrepSDKCall(SDKCall_VirtualAddress);
 	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature, "KeyValues::GetString()");
 	PrepSDKCall_SetReturnInfo(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);			//const char *keyName
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);			//const char *defaultValue
 	g_SDKCallGetKeyValuesString = EndPrepSDKCall();
+	
+	if (!g_SDKCallGetKeyValuesString) {
+		SetFailState("Could not initialize call to KeyValues::GetString()");
+	}
 	
 	StartPrepSDKCall(SDKCall_VirtualAddress);
 	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature, "KeyValues::FindKey()");
@@ -215,23 +202,13 @@ public void OnPluginStart() {
 	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain);				//bool bCreate
 	g_SDKCallGetKeyValuesFindKey = EndPrepSDKCall();
 	
-	StartPrepSDKCall(SDKCall_Static);
-	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature, "GetProtoScriptObjDefManager()");
-	PrepSDKCall_SetReturnInfo(SDKType_VirtualAddress, SDKPass_Plain);	//Returns address of CProtoBufScriptObjectDefinitionManager
-	g_SDKCallGetProtoDefManager = EndPrepSDKCall();
-	
-	StartPrepSDKCall(SDKCall_VirtualAddress);
-	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature,
-			"IProtoBufScriptObjectDefinition::GetDefIndex()");
-	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);		//Returns uint32
-	g_SDKCallGetProtoDefIndex = EndPrepSDKCall();
+	if (!g_SDKCallGetKeyValuesFindKey) {
+		SetFailState("Could not initialize call to KeyValues::FindKey()");
+	}
 
 	offs_CUtlMap_pMemory = PointerSize;
-	offs_CUtlMap_Data_elem_u16 = view_as<Address>(0x08) + PointerSize; // m_pMemory.m_Data.key + PointerSize
 	offs_CUtlMap_Data_elem_i32 = view_as<Address>(0x10) + PointerSize; // m_pMemory.m_Data.key + PointerSize
 	offs_CUtlMap_nAllocationCount = PointerSize * view_as<Address>(2);
-	offs_CUtlMap_Root = offs_CUtlMap_nAllocationCount + view_as<Address>(0x04 + 0x04);
-	offs_CUtlMap_NumElements_u16 = offs_CUtlMap_Root + view_as<Address>(0x02);
 
 	offs_CUtlVector_m_size = PointerSize + view_as<Address>(0x04 + 0x04);
 
@@ -243,8 +220,6 @@ public void OnPluginStart() {
 			GameConfGetAddressOffset(hGameConf, "CEconItemDefinition::m_u8MaxLevel");
 	offs_CEconItemDefinition_u8ItemQuality =
 			GameConfGetAddressOffset(hGameConf, "CEconItemDefinition::m_u8ItemQuality");
-	offs_CEconItemDefinition_si8ItemRarity =
-			GameConfGetAddressOffset(hGameConf, "CEconItemDefinition::m_si8ItemRarity");
 	offs_CEconItemDefinition_AttributeList =
 			GameConfGetAddressOffset(hGameConf, "CEconItemDefinition::m_AttributeList");
 	offs_CEconItemDefinition_pszLocalizedItemName =
@@ -267,11 +242,6 @@ public void OnPluginStart() {
 			GameConfGetAddressOffset(hGameConf, "CTFItemDefinition::m_aiItemSlot");
 	offs_CEconItemAttributeDefinition_m_pAttrType =
 			GameConfGetAddressOffset(hGameConf, "CEconItemAttributeDefinition::m_pAttrType");
-	
-	offs_CEconItemSchema_ItemRarities =
-			GameConfGetAddressOffset(hGameConf, "CEconItemSchema::m_ItemRarities");
-	offs_CEconItemSchema_iLastValidRarity =
-			GameConfGetAddressOffset(hGameConf, "CEconItemSchema::m_iLastValidRarity");
 	offs_CEconItemSchema_ItemQualities =
 			GameConfGetAddressOffset(hGameConf, "CEconItemSchema::m_ItemQualities");
 	offs_CEconItemSchema_ItemList =
@@ -285,16 +255,6 @@ public void OnPluginStart() {
 	offs_CEconItemSchema_EquipRegion_iGroup = PointerSize;
 	offs_CEconItemSchema_EquipRegion_bitsRegionMask = offs_CEconItemSchema_EquipRegion_iGroup + view_as<Address>(0x04);
 	sizeof_EquipRegion = offs_CEconItemSchema_EquipRegion_bitsRegionMask + view_as<Address>(0x04);
-
-	offs_CEconItemSchema_ParticleSystemTree =
-			GameConfGetAddressOffset(hGameConf, "CEconItemSchema::m_mapAttributeControlledParticleSystems");
-	
-	offs_CEconItemSchema_CosmeticUnusualEffectList =
-			GameConfGetAddressOffset(hGameConf, "CEconItemSchema::m_CosmeticUnusualEffectList");
-	offs_CEconItemSchema_WeaponUnusualEffectList =
-			GameConfGetAddressOffset(hGameConf, "CEconItemSchema::m_WeaponUnusualEffectList");
-	offs_CEconItemSchema_TauntUnusualEffectList =
-			GameConfGetAddressOffset(hGameConf, "CEconItemSchema::m_TauntUnusualEffectList");
 	
 	offs_CTFItemSchema_ItemSlotNames =
 			GameConfGetAddressOffset(hGameConf, "CTFItemSchema::m_ItemSlotNames");
@@ -320,36 +280,12 @@ public void OnPluginStart() {
 	offs_CEconItemQualityDefinition_pszName =
 			GameConfGetAddressOffset(hGameConf, "CEconItemQualityDefinition::m_pszName");
 	
-	offs_CEconItemRarityDefinition_iValue =
-			GameConfGetAddressOffset(hGameConf, "CEconItemRarityDefinition::m_iValue");
-	offs_CEconItemRarityDefinition_pszName =
-			GameConfGetAddressOffset(hGameConf, "CEconItemRarityDefinition::m_pszName");
-	
-	offs_attachedparticlesystem_pszParticleSystem =
-			GameConfGetAddressOffset(hGameConf,
-			"attachedparticlesystem_t::m_pszParticleSystem");
-	offs_attachedparticlesystem_iAttributeValue =
-			GameConfGetAddressOffset(hGameConf,
-			"attachedparticlesystem_t::m_iAttributeValue");
-	
-	offs_CProtoBufScriptObjectDefinitionManager_PaintList =
-			GameConfGetAddressOffset(hGameConf,
-			"CProtoBufScriptObjectDefinitionManager::m_PaintList");
-	sizeof_m_pMemory_DefinitionMap_t = offs_CUtlMap_Data_elem_u16 + PointerSize;
-	
 	sizeof_static_attrib_t = GameConfGetAddressOffset(hGameConf, "sizeof(static_attrib_t)");
 	sizeof_m_pMemory_CEconItemAttributeDefinition = offs_CUtlMap_Data_elem_i32
 		+ GameConfGetAddressOffset(hGameConf, "sizeof(CEconItemAttributeDefinition)");
-
-	sizeof_m_pMemory_attachedparticlesystem_t = offs_CUtlMap_Data_elem_u16
-		+ GameConfGetAddressOffset(hGameConf, "sizeof(attachedparticlesystem_t)");
 	
-	sizeof_m_pMemory_CEconItemRarityDefinition = offs_CUtlMap_Data_elem_i32
-		+ GameConfGetAddressOffset(hGameConf, "sizeof(CEconItemRarityDefinition)");
 	sizeof_m_pMemory_CEconItemQualityDefinition = offs_CUtlMap_Data_elem_i32
 		+ GameConfGetAddressOffset(hGameConf, "sizeof(CEconItemQualityDefinition)");
-
-	offs_MapDef_t_m_nDefIndex = PointerSize * view_as<Address>(3); // + sizeof(CSchemaItemDefHandle)
 
 	sizeof_ItemDefinitionMap_t_Node_t = PointerSize * view_as<Address>(3); // {int, pointer, int}, aligned to PointerSize
 	offs_CEconItemSchema_iNextNode =  sizeof_ItemDefinitionMap_t_Node_t - PointerSize;
@@ -547,26 +483,8 @@ Address GetEconAttributeDefinitionByName(const char[] name) {
 			SDKCall(g_SDKCallSchemaGetAttributeDefinitionByName, pSchema, name) : Address_Null;
 }
 
-Address GetMapDefinitionByName(const char[] name) {
-	Address pSchema = GetEconItemSchema();
-	return pSchema?
-			SDKCall(g_SDKCallGetMasterMapDefByName, pSchema, name) : Address_Null;
-}
-
 Address GetEconItemSchema() {
 	return SDKCall(g_SDKCallGetEconItemSchema);
-}
-
-Address GetProtoScriptObjDefManager() {
-	return SDKCall(g_SDKCallGetProtoDefManager);
-}
-
-int Native_GetProtoDefManagerAddress(Handle hPlugin, int nParams) {
-	return view_as<int>(GetProtoScriptObjDefManager());
-}
-
-int GetProtoDefIndex(Address pProtoDefinition) {
-	return SDKCall(g_SDKCallGetProtoDefIndex, pProtoDefinition);
 }
 
 static bool TranslateWeaponEntForClass(char[] buffer, int maxlen, int playerClass) {
