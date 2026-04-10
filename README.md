@@ -16,7 +16,7 @@ Other things for items, attributes, bodygroups and qualities work as intended (c
 ## Installation
 
 1. Make sure you have the latest version of Metamod:Source (dev 2.0 build 1387 or later).
-2. Make sure you have the latest version of Sourcemod (dev 1.13 build 7293 or later).
+2. Make sure you have the version of Sourcemod dev 1.13 build 7294 (update will be a bit later).
 3. Download this repository.
 4. Copy `tf_econ_data.smx` to `addons/sourcemod/plugins/`.
 5. Copy `tf2.econ_data.txt` to `addons/sourcemod/gamedata/`.
